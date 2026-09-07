@@ -1,2 +1,12 @@
-# app-gallary
-App gallery repository
+# معرض الألعاب ثلاثي الأبعاد — app-gallary
+
+ست ألعاب كلاسيكية بواجهة عربية وتصميم ثلاثي الأبعاد:
+
+1. **Snake** — نسخة مطوّرة من ثعبان نوكيا.
+2. **Block Puzzle** — لوحة 10×10.
+3. **Space Shooter**
+4. **X O**
+5. **Pac-Man**
+6. **Bounce**
+
+افتح index.html في المتصفح.
