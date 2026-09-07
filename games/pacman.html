@@ -1,23 +1,39 @@
-<!DOCTYPE html><html lang=ar dir=rtl><head><meta charset=UTF-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Pac-Man 3D</title><link href='https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap' rel=stylesheet><link rel=stylesheet href=../style.css></head><body><div class=game-wrap><div class=topbar><a href=../index.html>← المعرض</a><h2>Pac-Man 3D</h2></div><div class=hud><span id=score>النقاط: 0</span><button id=go>ابدأ</button></div><div id=view></div><p class=hint>أسهم أو WASD</p></div><script type=importmap>{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script><script type=module>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pac-Man 3D</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="game-wrap">
+    <div class="topbar"><a href="../index.html">← المعرض</a><h2>Pac-Man 3D</h2></div>
+    <div class="hud"><span id="score">النقاط: 0</span><span id="lvl">المرحلة: 1/3</span><button id="go">ابدأ</button></div>
+    <div id="view"></div>
+    <p class="hint">أسهم أو WASD</p>
+  </div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
 import * as THREE from 'three';
+import {makeAudio} from '../audio.js';
+import {boot3D} from '../look.js';
+const SFX=makeAudio();
 const MAP=['###############','#......#......#','#.##.#.#.#.##.#','#o#.........#o#','#.##.###.##.#.#','#.............#','##.###.#.###.##','#.............#','#.##.#####.##.#','#o.....#.....o#','###############'];
-const R=MAP.length,C=MAP[0].length, view=document.getElementById('view');
-const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); view.appendChild(renderer.domElement);
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x050814);
-const camera=new THREE.PerspectiveCamera(48,1,.1,80);
-scene.add(new THREE.AmbientLight(0x88aaff,.55)); const sun=new THREE.DirectionalLight(0xffffff,1); sun.position.set(8,14,6); scene.add(sun);
-function fit(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()} addEventListener('resize',fit); fit();
-const wallMat=new THREE.MeshStandardMaterial({color:0x1d4ed8,metalness:.2,roughness:.4});
-const floor=new THREE.Mesh(new THREE.BoxGeometry(C,.2,R), new THREE.MeshStandardMaterial({color:0x0b1530})); floor.position.set(C/2-.5,-.2,R/2-.5); scene.add(floor);
-for(let z=0;z<R;z++) for(let x=0;x<C;x++) if(MAP[z][x]==='#'){const w=new THREE.Mesh(new THREE.BoxGeometry(.92,.9,.92), wallMat); w.position.set(x,.35,z); scene.add(w);}
+const R=MAP.length,C=MAP[0].length, ox=(C-1)/2, oz=(R-1)/2;
+const view=document.getElementById('view');
+const {renderer,scene,camera}=boot3D(view,8.2,0x050814);
+const wallMat=new THREE.MeshStandardMaterial({color:0x2563eb,metalness:.25,roughness:.35,emissive:0x1e3a8a,emissiveIntensity:.15});
+const floor=new THREE.Mesh(new THREE.BoxGeometry(C,.2,R), new THREE.MeshStandardMaterial({color:0x0b1530})); floor.position.set(0,-.2,0); scene.add(floor);
+for(let z=0;z<R;z++) for(let x=0;x<C;x++) if(MAP[z][x]==='#'){const w=new THREE.Mesh(new THREE.BoxGeometry(.92,.7,.92), wallMat); w.position.set(x-ox,.35,z-oz); scene.add(w);}
 function walk(x,z){const c=MAP[z|0]&&MAP[z|0][x|0]; return c && c!=='#'}
-const pac=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12), new THREE.MeshStandardMaterial({color:0xfacc15})); scene.add(pac);
-const ghosts=[], dots=[]; const gCols=[0xef4444,0x22d3ee,0xf472b6];
-gCols.forEach((c,i)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.3,12,10), new THREE.MeshStandardMaterial({color:c})); scene.add(m); ghosts.push({m,x:7+i*.4,z:5,dx:i%2?1:-1});});
-let dir={x:1,z:0}, next={x:1,z:0}, score=0, fright=0, alive=true;
-function spawnDots(){dots.splice(0).forEach(d=>scene.remove(d.m)); for(let z=0;z<R;z++) for(let x=0;x<C;x++){ if(MAP[z][x]==='.'||MAP[z][x]==='o'){ const big=MAP[z][x]==='o'; const m=new THREE.Mesh(new THREE.SphereGeometry(big?.16:.08,8,8), new THREE.MeshStandardMaterial({color:0xfde68a,emissive:0xb45309})); m.position.set(x,.25,z); scene.add(m); dots.push({m,x,z,p:big?5:1}); }}}
-function reset(){pac.user={x:1.5,z:9}; dir={x:1,z:0}; next={x:1,z:0}; score=0; fright=0; alive=true; ghosts.forEach(g=>{g.x=7;g.z=5;}); spawnDots(); document.getElementById('score').textContent='النقاط: 0';}
+const pac=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12), new THREE.MeshStandardMaterial({color:0xfacc15,emissive:0xa16207,emissiveIntensity:.2})); scene.add(pac);
+const ghosts=[], dots=[];
+[0xef4444,0x22d3ee,0xf472b6].forEach((c,i)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.3,12,10), new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.2})); scene.add(m); ghosts.push({m,x:7+i*.4,z:5,dx:i%2?1:-1});});
+let dir={x:1,z:0}, next={x:1,z:0}, score=0, fright=0, alive=true, level=1, won=false;
+function spawnDots(){dots.splice(0).forEach(d=>scene.remove(d.m)); for(let z=0;z<R;z++) for(let x=0;x<C;x++){ if(MAP[z][x]==='.'||MAP[z][x]==='o'){ const big=MAP[z][x]==='o'; const m=new THREE.Mesh(new THREE.SphereGeometry(big?.16:.08,8,8), new THREE.MeshStandardMaterial({color:0xfde68a,emissive:0xb45309,emissiveIntensity:.35})); m.position.set(x-ox,.25,z-oz); scene.add(m); dots.push({m,x,z,p:big?5:1}); }}}
+function reset(){pac.user={x:1.5,z:9}; dir={x:1,z:0}; next={x:1,z:0}; score=0; fright=0; alive=true; won=false; level=1; ghosts.forEach(g=>{g.x=7;g.z=5}); spawnDots(); document.getElementById('score').textContent='النقاط: 0'; document.getElementById('lvl').textContent='المرحلة: 1/3'; SFX.start();}
 addEventListener('keydown',e=>{const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],a:[-1,0],d:[1,0],w:[0,-1],s:[0,1]}; const v=m[e.key]; if(v) next={x:v[0],z:v[1]};});
 document.getElementById('go').onclick=reset; let last=performance.now();
-function loop(now){const dt=Math.min(.04,(now-last)/1000); last=now; if(alive){ const nx=pac.user.x+next.x*.2, nz=pac.user.z+next.z*.2; if(walk(nx,nz)) dir=next; const px=pac.user.x+dir.x*2.6*dt, pz=pac.user.z+dir.z*2.6*dt; if(walk(px,pz)){pac.user.x=px; pac.user.z=pz;} pac.position.set(pac.user.x,.35,pac.user.z); for(let i=dots.length-1;i>=0;i--){const d=dots[i]; if(Math.hypot(d.x-pac.user.x,d.z-pac.user.z)<.4){ score+=d.p; if(d.p===5) fright=6; scene.remove(d.m); dots.splice(i,1); document.getElementById('score').textContent='النقاط: '+score; }} fright=Math.max(0,fright-dt); ghosts.forEach(g=>{ if(!walk(g.x+g.dx*.15,g.z)) g.dx*=-1; g.x+=g.dx*1.7*dt; g.m.position.set(g.x,.35,g.z); if(Math.hypot(g.x-pac.user.x,g.z-pac.user.z)<.45){ if(fright){g.x=7;g.z=5;score+=10;} else alive=false; }}); if(!dots.length) alive=false; } camera.position.set(pac.position.x+6,9.5,pac.position.z+8); camera.lookAt(pac.position.x,0,pac.position.z); renderer.render(scene,camera); requestAnimationFrame(loop);} reset(); requestAnimationFrame(loop);
+function loop(now){const dt=Math.min(.04,(now-last)/1000); last=now; if(alive){ if(walk(pac.user.x+next.x*.2,pac.user.z+next.z*.2)) dir=next; const px=pac.user.x+dir.x*2.6*dt, pz=pac.user.z+dir.z*2.6*dt; if(walk(px,pz)){pac.user.x=px; pac.user.z=pz} pac.position.set(pac.user.x-ox,.35,pac.user.z-oz); for(let i=dots.length-1;i>=0;i--){const d=dots[i]; if(Math.hypot(d.x-pac.user.x,d.z-pac.user.z)<.4){ score+=d.p; d.p===5?SFX.gold():SFX.eat(); if(d.p===5) fright=6; scene.remove(d.m); dots.splice(i,1); document.getElementById('score').textContent='النقاط: '+score; }} fright=Math.max(0,fright-dt); ghosts.forEach(g=>{ if(!walk(g.x+g.dx*.15,g.z)) g.dx*=-1; g.x+=g.dx*1.7*dt; g.m.position.set(g.x-ox,.35,g.z-oz); if(Math.hypot(g.x-pac.user.x,g.z-pac.user.z)<.45){ if(fright){g.x=7;g.z=5;score+=10;SFX.gold()} else {alive=false;SFX.hit()} }}); if(!dots.length && !won){ if(level<3){level++; SFX.level(); document.getElementById('lvl').textContent='المرحلة: '+level+'/3'; pac.user={x:1.5,z:9}; spawnDots();} else {won=true;alive=false;SFX.win(); document.getElementById('lvl').textContent='أكملت 3 مراحل'} } } renderer.render(scene,camera); requestAnimationFrame(loop);} reset(); requestAnimationFrame(loop);
 </script></body></html>
