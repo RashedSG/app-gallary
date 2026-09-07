@@ -1,39 +1,38 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Pac-Man 3D</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../style.css">
-</head>
-<body>
-  <div class="game-wrap">
-    <div class="topbar"><a href="../index.html">← المعرض</a><h2>Pac-Man 3D</h2></div>
-    <div class="hud"><span id="score">النقاط: 0</span><span id="lvl">المرحلة: 1/3</span><button id="go">ابدأ</button></div>
-    <div id="view"></div>
-    <p class="hint">أسهم أو WASD</p>
-  </div>
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pac-Man 2D</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="../style.css"></head><body><div class="game-wrap"><div class="topbar"><a href="../index.html">← المعرض</a><h2>Pac-Man 2D</h2></div><div class="hud"><span id="score">النقاط: 0</span><span id="lvl">المرحلة: 1/3</span><button id="go">ابدأ</button></div><div id="view"></div><p class="hint">اسحب للتحريك</p></div>
 <script type="module">
-import * as THREE from 'three';
 import {makeAudio} from '../audio.js';
-import {boot3D} from '../look.js';
+import {boot2D,clear} from '../look.js';
 const SFX=makeAudio();
-const MAP=['###############','#......#......#','#.##.#.#.#.##.#','#o#.........#o#','#.##.###.##.#.#','#.............#','##.###.#.###.##','#.............#','#.##.#####.##.#','#o.....#.....o#','###############'];
-const R=MAP.length,C=MAP[0].length, ox=(C-1)/2, oz=(R-1)/2;
-const view=document.getElementById('view');
-const {renderer,scene,camera}=boot3D(view,8.2,0x050814);
-const wallMat=new THREE.MeshStandardMaterial({color:0x2563eb,metalness:.25,roughness:.35,emissive:0x1e3a8a,emissiveIntensity:.15});
-const floor=new THREE.Mesh(new THREE.BoxGeometry(C,.2,R), new THREE.MeshStandardMaterial({color:0x0b1530})); floor.position.set(0,-.2,0); scene.add(floor);
-for(let z=0;z<R;z++) for(let x=0;x<C;x++) if(MAP[z][x]==='#'){const w=new THREE.Mesh(new THREE.BoxGeometry(.92,.7,.92), wallMat); w.position.set(x-ox,.35,z-oz); scene.add(w);}
-function walk(x,z){const c=MAP[z|0]&&MAP[z|0][x|0]; return c && c!=='#'}
-const pac=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12), new THREE.MeshStandardMaterial({color:0xfacc15,emissive:0xa16207,emissiveIntensity:.2})); scene.add(pac);
-const ghosts=[], dots=[];
-[0xef4444,0x22d3ee,0xf472b6].forEach((c,i)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.3,12,10), new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.2})); scene.add(m); ghosts.push({m,x:7+i*.4,z:5,dx:i%2?1:-1});});
-let dir={x:1,z:0}, next={x:1,z:0}, score=0, fright=0, alive=true, level=1, won=false;
-function spawnDots(){dots.splice(0).forEach(d=>scene.remove(d.m)); for(let z=0;z<R;z++) for(let x=0;x<C;x++){ if(MAP[z][x]==='.'||MAP[z][x]==='o'){ const big=MAP[z][x]==='o'; const m=new THREE.Mesh(new THREE.SphereGeometry(big?.16:.08,8,8), new THREE.MeshStandardMaterial({color:0xfde68a,emissive:0xb45309,emissiveIntensity:.35})); m.position.set(x-ox,.25,z-oz); scene.add(m); dots.push({m,x,z,p:big?5:1}); }}}
-function reset(){pac.user={x:1.5,z:9}; dir={x:1,z:0}; next={x:1,z:0}; score=0; fright=0; alive=true; won=false; level=1; ghosts.forEach(g=>{g.x=7;g.z=5}); spawnDots(); document.getElementById('score').textContent='النقاط: 0'; document.getElementById('lvl').textContent='المرحلة: 1/3'; SFX.start();}
-addEventListener('keydown',e=>{const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],a:[-1,0],d:[1,0],w:[0,-1],s:[0,1]}; const v=m[e.key]; if(v) next={x:v[0],z:v[1]};});
-document.getElementById('go').onclick=reset; let last=performance.now();
-function loop(now){const dt=Math.min(.04,(now-last)/1000); last=now; if(alive){ if(walk(pac.user.x+next.x*.2,pac.user.z+next.z*.2)) dir=next; const px=pac.user.x+dir.x*2.6*dt, pz=pac.user.z+dir.z*2.6*dt; if(walk(px,pz)){pac.user.x=px; pac.user.z=pz} pac.position.set(pac.user.x-ox,.35,pac.user.z-oz); for(let i=dots.length-1;i>=0;i--){const d=dots[i]; if(Math.hypot(d.x-pac.user.x,d.z-pac.user.z)<.4){ score+=d.p; d.p===5?SFX.gold():SFX.eat(); if(d.p===5) fright=6; scene.remove(d.m); dots.splice(i,1); document.getElementById('score').textContent='النقاط: '+score; }} fright=Math.max(0,fright-dt); ghosts.forEach(g=>{ if(!walk(g.x+g.dx*.15,g.z)) g.dx*=-1; g.x+=g.dx*1.7*dt; g.m.position.set(g.x-ox,.35,g.z-oz); if(Math.hypot(g.x-pac.user.x,g.z-pac.user.z)<.45){ if(fright){g.x=7;g.z=5;score+=10;SFX.gold()} else {alive=false;SFX.hit()} }}); if(!dots.length && !won){ if(level<3){level++; SFX.level(); document.getElementById('lvl').textContent='المرحلة: '+level+'/3'; pac.user={x:1.5,z:9}; spawnDots();} else {won=true;alive=false;SFX.win(); document.getElementById('lvl').textContent='أكملت 3 مراحل'} } } renderer.render(scene,camera); requestAnimationFrame(loop);} reset(); requestAnimationFrame(loop);
+const MAP=['###############','#......#......#','#.##.#.#.#.##.#','#o#.........#o#','#.##.###.##.#.#','#.............#','###############'];
+const R=MAP.length,C=MAP[0].length, view=document.getElementById('view'), {ctx}=boot2D(view);
+let px,py,d,nd,dots,gx,gy,gdir,score,level,alive;
+function walk(x,y){return MAP[y|0]&&MAP[y|0][x|0]&&MAP[y|0][x|0]!=='#'}
+function spawnDots(){dots=[]; for(let y=0;y<R;y++)for(let x=0;x<C;x++) if('.o'.includes(MAP[y][x])) dots.push({x,y,p:MAP[y][x]==='o'?5:1})}
+function reset(){px=1.5;py=5;d={x:1,y:0};nd=d;gx=7;gy=3;gdir=1;score=0;level=1;alive=true;spawnDots();ui();SFX.start()}
+function ui(){document.getElementById('score').textContent='النقاط: '+score; document.getElementById('lvl').textContent='المرحلة: '+level+'/3'}
+function setDir(x,y){nd={x,y}}
+addEventListener('keydown',e=>{const m={ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0],ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1]}; const v=m[e.key]; if(v)setDir(v[0],v[1])});
+let sx,sy; view.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY});
+view.addEventListener('pointerup',e=>{const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.hypot(dx,dy)<10)return; if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1,0); else setDir(0,dy>0?1:-1)});
+document.getElementById('go').onclick=reset;
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(.04,(now-last)/1000); last=now;
+  if(alive){
+    if(walk(px+nd.x*.2,py+nd.y*.2)) d=nd;
+    const nx=px+d.x*3.1*dt, ny=py+d.y*3.1*dt; if(walk(nx,ny)){px=nx;py=ny}
+    dots=dots.filter(o=>{if(Math.hypot(o.x-px,o.y-py)<.4){score+=o.p;SFX.eat();ui();return false} return true});
+    if(!walk(gx+gdir*.15,gy)) gdir*=-1; gx+=gdir*2*dt;
+    if(Math.hypot(gx-px,gy-py)<.45){alive=false;SFX.hit()}
+    if(!dots.length){if(level<3){level++;SFX.level();px=1.5;py=5;spawnDots();ui()} else {alive=false;SFX.win()}}
+  }
+  const w=view.clientWidth,h=view.clientHeight,cs=Math.min(w/C,(h-8)/R), ox=(w-cs*C)/2, oy=(h-cs*R)/2;
+  clear(ctx,view,'#050814');
+  for(let y=0;y<R;y++)for(let x=0;x<C;x++) if(MAP[y][x]==='#'){ctx.fillStyle='#2563eb'; ctx.fillRect(ox+x*cs+1,oy+y*cs+1,cs-2,cs-2)}
+  dots.forEach(o=>{ctx.fillStyle='#fde68a'; ctx.beginPath(); ctx.arc(ox+(o.x+.5)*cs,oy+(o.y+.5)*cs,o.p>1?6:2.5,0,7); ctx.fill()});
+  ctx.fillStyle='#facc15'; ctx.beginPath(); ctx.arc(ox+(px+.5)*cs,oy+(py+.5)*cs,cs*.35,0,7); ctx.fill();
+  ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(ox+(gx+.5)*cs,oy+(gy+.5)*cs,cs*.33,0,7); ctx.fill();
+  requestAnimationFrame(loop);
+}
+reset(); requestAnimationFrame(loop);
 </script></body></html>
