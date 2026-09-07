@@ -1,9 +1,28 @@
-<!DOCTYPE html><html lang=ar dir=rtl><head><meta charset=UTF-8><meta name=viewport content='width=device-width,initial-scale=1'><title>X O</title><link href='https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap' rel=stylesheet><link rel=stylesheet href=../style.css></head><body><div class=game-wrap><div class=topbar><a href=../index.html>← المعرض</a><h2>إكس أو ثلاثي الأبعاد</h2></div><div class=hud><span id=turn>دورك: X</span><button id=mode>الخصم: كمبيوتر</button><button id=reset>إعادة</button></div><div class=xo-grid id=board></div><p class=hint>ثلاث في صف يفوز</p></div><script>
-const boardEl=document.getElementById('board');let cells,vsAI=true,turn='X',over=false;
-function lines(b){const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];for(const[a,c,d]of L)if(b[a]&&b[a]===b[c]&&b[a]===b[d])return b[a];return b.every(Boolean)?'تعادل':null}
-function aiMove(){const empty=cells.map((v,i)=>v?null:i).filter(v=>v!==null);for(const i of empty){const t=cells.slice();t[i]='O';if(lines(t)==='O')return i}for(const i of empty){const t=cells.slice();t[i]='X';if(lines(t)==='X')return i}if(empty.includes(4))return 4;return empty[Math.floor(Math.random()*empty.length)]}
-function render(){boardEl.innerHTML='';cells.forEach((v,i)=>{const b=document.createElement('button');b.className='cell';b.textContent=v||'';b.style.color=v==='X'?'#38bdf8':'#fb7185';b.onclick=()=>play(i);boardEl.appendChild(b)})}
-function play(i){if(over||cells[i])return;cells[i]=turn;const w=lines(cells);if(w){over=true;document.getElementById('turn').textContent=w==='تعادل'?'تعادل':('الفائز: '+w);render();return}turn=turn==='X'?'O':'X';document.getElementById('turn').textContent='الدور: '+turn;render();if(vsAI&&turn==='O'&&!over)setTimeout(()=>{const m=aiMove();if(m!=null)play(m)},280)}
-function reset(){cells=Array(9).fill('');turn='X';over=false;document.getElementById('turn').textContent='دورك: X';render()}
-document.getElementById('reset').onclick=reset;document.getElementById('mode').onclick=e=>{vsAI=!vsAI;e.target.textContent='الخصم: '+(vsAI?'كمبيوتر':'صديق');reset()};reset();
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XO 3D</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="../style.css"></head><body><div class="game-wrap"><div class="topbar"><a href="../index.html">← المعرض</a><h2>إكس أو 3D</h2></div><div class="hud"><span id="turn">دورك: X</span><button id="mode">الخصم: كمبيوتر</button><button id="go">إعادة</button></div><div id="view"></div><p class="hint">اضغط على المربع</p></div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const view=document.getElementById('view');
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); view.appendChild(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0b1020);
+const camera=new THREE.PerspectiveCamera(40,1,.1,50); camera.position.set(4.2,7.2,6.4); camera.lookAt(1.2,0,1.2);
+scene.add(new THREE.AmbientLight(0x9db4ff,.55)); const sun=new THREE.DirectionalLight(0xffffff,1.15); sun.position.set(4,8,3); scene.add(sun);
+function fit(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()} addEventListener('resize',fit); fit();
+const board=new THREE.Mesh(new THREE.BoxGeometry(4.1,.28,4.1), new THREE.MeshStandardMaterial({color:0x1e293b,metalness:.2,roughness:.5})); board.position.set(1.1,-.2,1.2); scene.add(board);
+const tiles=[], marks=[]; const tileMat=new THREE.MeshStandardMaterial({color:0x334155,roughness:.45});
+const xMat=new THREE.MeshStandardMaterial({color:0x38bdf8,emissive:0x0ea5e9,emissiveIntensity:.25});
+const oMat=new THREE.MeshStandardMaterial({color:0xfb7185,emissive:0xbe123c,emissiveIntensity:.2});
+for(let i=0;i<9;i++){const x=i%3,z=(i/3)|0; const t=new THREE.Mesh(new THREE.BoxGeometry(1.05,.12,1.05), tileMat.clone()); t.position.set(x*1.15,0,z*1.15); t.userData.i=i; scene.add(t); tiles.push(t);}
+let cells, vsAI=true, turn='X', over=false;
+function winner(b){const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,c,d] of L) if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return b[a]; return b.every(Boolean)?'تعادل':null;}
+function addMark(i,who){const t=tiles[i], g=new THREE.Group(); g.position.copy(t.position); g.position.y=.35; if(who==='X'){const a=new THREE.Mesh(new THREE.BoxGeometry(.18,1.05,.18),xMat); const b=a.clone(); a.rotation.z=.7; b.rotation.z=-.7; g.add(a,b);} else {const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.1,10,20),oMat); ring.rotation.x=Math.PI/2; g.add(ring);} scene.add(g); marks.push(g);}
+function ai(){const empty=cells.map((v,i)=>v?null:i).filter(v=>v!==null); for(const i of empty){const t=cells.slice(); t[i]='O'; if(winner(t)==='O') return i} for(const i of empty){const t=cells.slice(); t[i]='X'; if(winner(t)==='X') return i} if(empty.includes(4)) return 4; return empty[(Math.random()*empty.length)|0];}
+function play(i){if(over||cells[i]) return; cells[i]=turn; addMark(i,turn); const w=winner(cells); if(w){ over=true; document.getElementById('turn').textContent=w==='تعادل'?'تعادل':'\u0627\u0644\u0641\u0627\u0626\u0632: '+w; return;} turn=turn==='X'?'O':'X'; document.getElementById('turn').textContent='الدور: '+turn; if(vsAI && turn==='O' && !over) setTimeout(()=>play(ai()),280);}
+function reset(){cells=Array(9).fill(''); turn='X'; over=false; marks.splice(0).forEach(m=>scene.remove(m)); document.getElementById('turn').textContent='دورك: X';}
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
+view.addEventListener('pointerdown',e=>{const r=view.getBoundingClientRect(); mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1; ray.setFromCamera(mouse,camera); const hit=ray.intersectObjects(tiles)[0]; if(hit) play(hit.object.userData.i);});
+document.getElementById('go').onclick=reset;
+document.getElementById('mode').onclick=e=>{vsAI=!vsAI; e.target.textContent='الخصم: '+(vsAI?'كمبيوتر':'صديق'); reset();};
+function loop(t){camera.position.x=4.2+Math.sin(t/1800)*.25; camera.lookAt(1.2,0,1.2); renderer.render(scene,camera); requestAnimationFrame(loop);} reset(); requestAnimationFrame(loop);
 </script></body></html>
