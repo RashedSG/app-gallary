@@ -9,13 +9,15 @@
 <body>
   <div class="game-wrap">
     <div class="topbar"><a href="../index.html">← المعرض</a><h2>Snake ثلاثي الأبعاد</h2></div>
-    <div class="hud"><span id="score">النقاط: 0</span><span id="best">أفضل: 0</span><button id="go">ابدأ</button></div>
+    <div class="hud"><span id="score">النقاط: 0</span><span id="lvl">المرحلة: 1/3</span><span id="best">أفضل: 0</span><button id="go">ابدأ</button></div>
     <div id="view"></div>
     <p class="hint">أسهم / WASD / سحب على الشاشة</p>
   </div>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
+import {makeAudio} from '../audio.js';
+const SFX=makeAudio();
 const N=14, view=document.getElementById('view');
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -31,13 +33,13 @@ const tile=new THREE.BoxGeometry(.92,.28,.92);
 for(let z=0;z<N;z++) for(let x=0;x<N;x++){const t=new THREE.Mesh(tile,(x+z)%2?mats.a:mats.b); t.position.set(x,0,z); scene.add(t);}
 const segs=[], geo=new THREE.BoxGeometry(.78,.78,.78);
 const foodMesh=new THREE.Mesh(new THREE.SphereGeometry(.38,16,16),mats.food); foodMesh.position.y=.55; scene.add(foodMesh);
-let snake,dir,food,score,alive,acc=0,stepT=.16;
+let snake,dir,food,score,alive,acc=0,stepT=.18,level=1,won=false;
 const bestKey='snake3d_best';
 document.getElementById('best').textContent='أفضل: '+(localStorage.getItem(bestKey)||0);
-function reset(){snake=[{x:6,z:7},{x:5,z:7},{x:4,z:7}]; dir={x:1,z:0}; score=0; alive=true; acc=0; document.getElementById('score').textContent='النقاط: 0'; place(); sync();}
+function reset(){snake=[{x:6,z:7},{x:5,z:7},{x:4,z:7}]; dir={x:1,z:0}; score=0; alive=true; acc=0; level=1; won=false; stepT=.18; document.getElementById('score').textContent='النقاط: 0'; document.getElementById('lvl').textContent='المرحلة: 1/3'; SFX.start(); place(); sync();}
 function place(){do{food={x:(Math.random()*N)|0,z:(Math.random()*N)|0,gold:Math.random()<.2}}while(snake.some(s=>s.x===food.x&&s.z===food.z)); foodMesh.material=food.gold?mats.gold:mats.food; foodMesh.position.set(food.x,.55,food.z);}
 function sync(){while(segs.length<snake.length){const m=new THREE.Mesh(geo,mats.body);scene.add(m);segs.push(m)} while(segs.length>snake.length){const m=segs.pop();scene.remove(m)} snake.forEach((s,i)=>{const m=segs[i]; m.material=i?mats.body:mats.head; m.position.set(s.x,.48,s.z)});}
-function tick(){if(!alive) return; const h={x:snake[0].x+dir.x,z:snake[0].z+dir.z}; if(h.x<0||h.z<0||h.x>=N||h.z>=N||snake.some(s=>s.x===h.x&&s.z===h.z)){alive=false;return} snake.unshift(h); if(h.x===food.x&&h.z===food.z){score+=food.gold?5:1; if(food.gold) snake.push({...snake.at(-1)}); document.getElementById('score').textContent='النقاط: '+score; const b=Math.max(score,+(localStorage.getItem(bestKey)||0)); localStorage.setItem(bestKey,b); document.getElementById('best').textContent='أفضل: '+b; place();} else snake.pop(); sync();}
+function tick(){if(!alive||won) return; const h={x:snake[0].x+dir.x,z:snake[0].z+dir.z}; if(h.x<0||h.z<0||h.x>=N||h.z>=N||snake.some(s=>s.x===h.x&&s.z===h.z)){alive=false; SFX.hit(); return} snake.unshift(h); if(h.x===food.x&&h.z===food.z){score+=food.gold?5:1; food.gold?SFX.gold():SFX.eat(); if(food.gold) snake.push({...snake.at(-1)}); document.getElementById('score').textContent='النقاط: '+score; const b=Math.max(score,+(localStorage.getItem(bestKey)||0)); localStorage.setItem(bestKey,b); document.getElementById('best').textContent='أفضل: '+b; const need=[0,8,18,30]; if(level<3 && score>=need[level]){ level++; stepT=Math.max(.1,stepT-.03); SFX.level(); document.getElementById('lvl').textContent='المرحلة: '+level+'/3'; } if(level===3 && score>=30){ won=true; SFX.win(); document.getElementById('lvl').textContent='أكملت 3 مراحل'; } place(); } else snake.pop(); sync();}
 function setDir(x,z){ if(dir.x+x===0&&dir.z+z===0) return; dir={x,z}; }
 addEventListener('keydown',e=>{const k=e.key; if(['ArrowUp','w','W'].includes(k)) setDir(0,-1); if(['ArrowDown','s','S'].includes(k)) setDir(0,1); if(['ArrowLeft','a','A'].includes(k)) setDir(-1,0); if(['ArrowRight','d','D'].includes(k)) setDir(1,0);});
 let sx,sy; view.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY});
@@ -46,5 +48,4 @@ document.getElementById('go').onclick=reset;
 let last=performance.now();
 function loop(now){const dt=Math.min(.05,(now-last)/1000); last=now; acc+=dt; while(acc>stepT){acc-=stepT; tick()} foodMesh.position.y=.45+Math.sin(now/250)*.12; renderer.render(scene,camera); requestAnimationFrame(loop);}
 reset(); requestAnimationFrame(loop);
-</script>
-</body></html>
+</script></body></html>
