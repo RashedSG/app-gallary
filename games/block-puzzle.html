@@ -1,41 +1,22 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Block Puzzle 3D</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../style.css">
-</head>
-<body>
-  <div class="game-wrap">
-    <div class="topbar"><a href="../index.html">← المعرض</a><h2>Block Puzzle 3D</h2></div>
-    <div class="hud"><span id="score">النقاط: 0</span><span id="lvl">المرحلة: 1/3</span><span id="sel">اختر شكلاً ثم مربعاً</span><button id="go">جديد</button></div>
-    <div id="view"></div>
-    <p class="hint">اضغط الشكل ثم مكاناً على الشبكة</p>
-  </div>
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Block Puzzle 2D</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="../style.css"></head><body><div class="game-wrap"><div class="topbar"><a href="../index.html">← المعرض</a><h2>Block Puzzle 2D</h2></div><div class="hud"><span id="score">0</span><span id="lvl">1/3</span><button id="go">جديد</button></div><div id="view"></div><p class="hint">اختر شكلاً ثم الشبكة</p></div>
 <script type="module">
-import * as THREE from 'three';
-import {makeAudio} from '../audio.js';
-import {boot3D} from '../look.js';
-const SFX=makeAudio();
-const G=8, view=document.getElementById('view');
-const {renderer,scene,camera}=boot3D(view,6.4,0x08101c);
-const SHAPES=[[[1,1],[1,1]],[[1,1,1]],[[1],[1],[1]],[[1,1,1],[1,0,0]],[[1,1,1,1]],[[1],[1],[1],[1]],[[1]]];
-const COLORS=[0xf97316,0x22c55e,0x3b82f6,0xeab308,0xa855f7,0xef4444];
-const emptyMat=new THREE.MeshStandardMaterial({color:0x1e293b,roughness:.7});
-const tiles=[], occ=[]; const geo=new THREE.BoxGeometry(.88,.22,.88);
-for(let z=0;z<G;z++){occ[z]=[]; for(let x=0;x<G;x++){ const m=new THREE.Mesh(geo,emptyMat); m.position.set(x-(G-1)/2,0,z-(G-1)/2); m.userData={x,z,kind:'cell'}; scene.add(m); tiles.push(m); occ[z][x]=0; }}
-let pieces=[], pick=null, score=0, tray=[], level=1, cleared=0;
-function clearTray(){tray.splice(0).forEach(o=>scene.remove(o))}
-function spawn(){clearTray(); pieces=[]; for(let i=0;i<3;i++){const s=SHAPES[(Math.random()*SHAPES.length)|0], c=COLORS[(Math.random()*COLORS.length)|0]; pieces.push({s,c,used:false,i}); const g=new THREE.Group(); s.forEach((row,y)=>row.forEach((v,x)=>{if(v){const m=new THREE.Mesh(new THREE.BoxGeometry(.32,.32,.32), new THREE.MeshStandardMaterial({color:c})); m.position.set(x*.34,0,y*.34); g.add(m);}})); g.position.set(i*2.2-2.2,0,5.1); g.userData={kind:'piece',i}; scene.add(g); tray.push(g);}}
-function can(s,gx,gz){for(let z=0;z<s.length;z++) for(let x=0;x<s[0].length;x++){if(!s[z][x]) continue; const X=gx+x,Z=gz+z; if(X<0||Z<0||X>=G||Z>=G||occ[Z][X]) return false;} return true;}
-function paint(){tiles.forEach(t=>{const v=occ[t.userData.z][t.userData.x]; t.material=v?new THREE.MeshStandardMaterial({color:v,roughness:.35,metalness:.15}):emptyMat; t.scale.y=v?2.4:1; t.position.y=v?.18:0;});}
-function place(s,gx,gz,c){s.forEach((row,z)=>row.forEach((v,x)=>{if(v) occ[gz+z][gx+x]=c})); const rows=[],cols=[]; for(let i=0;i<G;i++){ if(occ[i].every(Boolean)) rows.push(i); if(occ.every(r=>r[i])) cols.push(i);} rows.forEach(i=>occ[i].fill(0)); cols.forEach(i=>occ.forEach(r=>r[i]=0)); score+=s.flat().filter(Boolean).length; SFX.place(); if(rows.length+cols.length){cleared++; SFX.eat(); if(level<3 && cleared>=level*2){level++; SFX.level(); document.getElementById('lvl').textContent='المرحلة: '+level+'/3'} if(level===3 && cleared>=6) SFX.win();} document.getElementById('score').textContent='النقاط: '+score; paint();}
-function reset(){for(let z=0;z<G;z++) occ[z].fill(0); score=0; pick=null; level=1; cleared=0; document.getElementById('score').textContent='النقاط: 0'; document.getElementById('lvl').textContent='المرحلة: 1/3'; SFX.start(); spawn(); paint();}
-const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
-view.addEventListener('pointerdown',e=>{const r=view.getBoundingClientRect(); mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1; ray.setFromCamera(mouse,camera); const hits=ray.intersectObjects([...tray,...tiles],true); if(!hits[0]) return; let o=hits[0].object; while(o && !o.userData.kind) o=o.parent; if(!o) return; if(o.userData.kind==='piece' && !pieces[o.userData.i].used){ pick=o.userData.i; document.getElementById('sel').textContent='الشكل '+(pick+1); return;} if(o.userData.kind==='cell' && pick!=null){ const p=pieces[pick]; if(can(p.s,o.userData.x,o.userData.z)){ place(p.s,o.userData.x,o.userData.z,p.c); p.used=true; scene.remove(tray[pick]); pick=null; if(pieces.every(x=>x.used)) spawn(); } }});
+import {makeAudio} from '../audio.js'; import {boot2D,clear} from '../look.js';
+const SFX=makeAudio(), view=document.getElementById('view'), {ctx}=boot2D(view);
+const G=8, SH=[[[1,1],[1,1]],[[1,1,1]],[[1],[1],[1]],[[1,1,1,1]],[[1,1,1],[1,0,0]]], COLS=['#f97316','#22c55e','#3b82f6','#eab308'];
+let occ,pieces,used,cols,pick,score,level;
+function reset(){occ=[...Array(G)].map(()=>Array(G).fill(0));score=0;level=1;pick=0;spawn();ui();SFX.start()}
+function spawn(){pieces=[0,0,0].map(()=>SH[(Math.random()*SH.length)|0]);used=[false,false,false];cols=[0,0,0].map(()=>COLS[(Math.random()*COLS.length)|0])}
+function ui(){document.getElementById('score').textContent='النقاط: '+score;document.getElementById('lvl').textContent='المرحلة: '+level+'/3'}
+function layout(){const w=view.clientWidth,h=view.clientHeight,s=Math.max(10,Math.min((w-24)/G,(h-90)/G)|0);return {s,ox:(w-s*G)/2,oy:12}}
+function can(sh,gx,gy){for(let j=0;j<sh.length;j++)for(let i=0;i<sh[0].length;i++){if(!sh[j][i])continue;const X=gx+i,Y=gy+j;if(X<0||Y<0||X>=G||Y>=G||occ[Y][X])return false}return true}
+function place(sh,gx,gy,c){sh.forEach((row,j)=>row.forEach((v,i)=>{if(v)occ[gy+j][gx+i]=c}));let cl=0;for(let i=0;i<G;i++){if(occ[i].every(Boolean)){occ[i].fill(0);cl++}if(occ.every(r=>r[i])){occ.forEach(r=>r[i]=0);cl++}}score+=sh.flat().filter(Boolean).length;SFX.place();if(cl&&level<3){level++;SFX.level()}ui()}
+view.addEventListener('pointerdown',e=>{const r=view.getBoundingClientRect(),L=layout(),px=e.clientX-r.left,py=e.clientY-r.top;
+if(py>L.oy+L.s*G+8){const i=((px-L.ox)/(L.s*2.4))|0;if(i>=0&&i<3&&!used[i])pick=i;return}
+const gx=((px-L.ox)/L.s)|0,gy=((py-L.oy)/L.s)|0;
+if(gx>=0&&gy>=0&&gx<G&&gy<G&&!used[pick]&&can(pieces[pick],gx,gy)){place(pieces[pick],gx,gy,cols[pick]);used[pick]=true;if(used.every(Boolean))spawn()}});
 document.getElementById('go').onclick=reset;
-function loop(){ renderer.render(scene,camera); requestAnimationFrame(loop)}
-reset(); requestAnimationFrame(loop);
+function loop(){clear(ctx,view,'#08101c');const L=layout();
+for(let y=0;y<G;y++)for(let x=0;x<G;x++){ctx.fillStyle=occ[y][x]||'#1e293b';ctx.beginPath();ctx.roundRect(L.ox+x*L.s+2,L.oy+y*L.s+2,L.s-4,L.s-4,6);ctx.fill()}
+pieces.forEach((sh,i)=>{const bx=L.ox+i*L.s*2.4,by=L.oy+L.s*G+16;ctx.strokeStyle=i===pick?'#fff':'#64748b';ctx.strokeRect(bx,by,L.s*2.2,L.s*2.2);if(used[i])return;sh.forEach((row,j)=>row.forEach((v,k)=>{if(!v)return;ctx.fillStyle=cols[i];ctx.fillRect(bx+10+k*16,by+10+j*16,14,14)}))});
+requestAnimationFrame(loop)} reset(); requestAnimationFrame(loop);
 </script></body></html>

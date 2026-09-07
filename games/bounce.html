@@ -1,45 +1,25 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Bounce 3D</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../style.css">
-</head>
-<body>
-  <div class="game-wrap">
-    <div class="topbar"><a href="../index.html">← المعرض</a><h2>Bounce 3D</h2></div>
-    <div class="hud"><span id="lvl">المرحلة: 1/3</span><span id="stars">نجوم: 0</span><button id="go">أعد المرحلة</button></div>
-    <div id="view"></div>
-    <p class="hint">يسار/يمين للحركة · أعلى أو مسافة للقفز · رؤية جانبية</p>
-  </div>
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bounce 2D</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="../style.css"></head><body><div class="game-wrap"><div class="topbar"><a href="../index.html">← المعرض</a><h2>Bounce 2D</h2></div><div class="hud"><span id="lvl">1/3</span><span id="stars">0</span><button id="go">أعد</button></div><div id="view"></div><p class="hint">نصف يسار / نصف يمين + قفز</p></div>
 <script type="module">
-import * as THREE from 'three';
-import {makeAudio} from '../audio.js';
-import {bootSide} from '../look.js';
-const SFX=makeAudio();
-const view=document.getElementById('view');
-const {renderer,scene,camera}=bootSide(view,8,0x071824);
-const levels=[
-  {ball:[-6,.6,0], plats:[[0,-.2,0,16,.4,2.2],[-2,1.2,0,3,.3,1.6],[2,2.2,0,3,.3,1.6]], stars:[[-2,2,0],[2,3,0]], goal:[6,1.2,0], spikes:[[0,.35,0]]},
-  {ball:[-7,.6,0], plats:[[-5,-.2,0,8,.4,2.2],[0,1.1,0,3.2,.3,1.6],[3.5,2.2,0,3,.3,1.6],[7,3.2,0,3,.3,1.6]], stars:[[0,1.9,0],[3.5,3,0],[7,4,0]], goal:[7.6,4.1,0], spikes:[[-1,.35,0],[2,.35,0]]},
-  {ball:[-7,.6,0], plats:[[-6,-.2,0,6,.4,2.2],[-1,1.3,0,3,.3,1.6],[2.6,2.4,0,3,.3,1.6],[6.5,3.4,0,3.4,.3,1.6]], stars:[[-1,2.1,0],[2.6,3.2,0],[6.5,4.2,0]], goal:[7.2,4.3,0], spikes:[[-2.2,.35,0],[1.1,.35,0],[4.2,.35,0]]}
-];
-const ball=new THREE.Mesh(new THREE.SphereGeometry(.38,20,16), new THREE.MeshStandardMaterial({color:0x38bdf8,metalness:.35,roughness:.25})); scene.add(ball);
-let L=0, vel, keys={}, plats=[], starM=[], spikeM=[], goal, world=[], dead, win, got, grounded;
-function clearW(){world.splice(0).forEach(o=>scene.remove(o)); plats=[]; starM=[]; spikeM=[]}
-function load(){clearW(); const lv=levels[L]; ball.position.set(...lv.ball); vel={x:0,y:0}; dead=false; win=false; got=0; grounded=false;
- lv.plats.forEach(p=>{const m=new THREE.Mesh(new THREE.BoxGeometry(p[3],p[4],p[5]), new THREE.MeshStandardMaterial({color:0x64748b,metalness:.2,roughness:.45})); m.position.set(p[0],p[1],p[2]); scene.add(m); world.push(m); plats.push({m,p});});
- lv.stars.forEach(s=>{const m=new THREE.Mesh(new THREE.OctahedronGeometry(.26), new THREE.MeshStandardMaterial({color:0xfacc15,emissive:0xb45309,emissiveIntensity:.35})); m.position.set(...s); scene.add(m); world.push(m); starM.push(m);});
- lv.spikes.forEach(s=>{const m=new THREE.Mesh(new THREE.ConeGeometry(.28,.55,5), new THREE.MeshStandardMaterial({color:0xfb7185})); m.position.set(s[0],s[1],s[2]||0); scene.add(m); world.push(m); spikeM.push(m);});
- goal=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.9,12), new THREE.MeshStandardMaterial({color:0x4ade80,emissive:0x166534,emissiveIntensity:.25})); goal.position.set(...lv.goal); scene.add(goal); world.push(goal);
- document.getElementById('lvl').textContent='المرحلة: '+(L+1)+'/3'; SFX.level(); document.getElementById('stars').textContent='نجوم: 0/'+starM.length;}
-function aabb(px,py,r,p){return px+r>p[0]-p[3]/2 && px-r<p[0]+p[3]/2 && py+r>p[1]-p[4]/2 && py-r<p[1]+p[4]/2}
-addEventListener('keydown',e=>keys[e.key]=true); addEventListener('keyup',e=>keys[e.key]=false);
-view.addEventListener('pointerdown',e=>{const r=view.getBoundingClientRect(); if(e.clientX-r.left<r.width/2) keys.ArrowLeft=true; else keys.ArrowRight=true; keys.ArrowUp=true;});
-view.addEventListener('pointerup',()=>{keys.ArrowLeft=keys.ArrowRight=keys.ArrowUp=false});
-document.getElementById('go').onclick=()=>{dead=false; load()};
+import {makeAudio} from '../audio.js'; import {boot2D,clear} from '../look.js';
+const SFX=makeAudio(), view=document.getElementById('view'), {ctx}=boot2D(view);
+const levels=[[{x:0,y:.86,w:1,h:.04},{x:.22,y:.64,w:.2,h:.03},{x:.55,y:.46,w:.2,h:.03}],[{x:0,y:.9,w:.42,h:.04},{x:.52,y:.9,w:.42,h:.04},{x:.3,y:.66,w:.18,h:.03},{x:.62,y:.46,w:.18,h:.03}],[{x:0,y:.9,w:.3,h:.04},{x:.4,y:.7,w:.2,h:.03},{x:.66,y:.5,w:.18,h:.03},{x:.82,y:.32,w:.14,h:.03}]];
+let L,plats,x,y,vx,vy,stars,got,dead,win,keys={},gnd;
+function load(){plats=levels[L].map(p=>({...p}));x=.1;y=.7;vx=0;vy=0;stars=plats.slice(1).map(p=>({x:p.x+p.w/2,y:p.y-.06}));got=new Set();dead=false;win=false;document.getElementById('lvl').textContent='المرحلة: '+(L+1)+'/3';document.getElementById('stars').textContent='نجوم: 0/'+stars.length}
+function reset(){L=0;load()}
+addEventListener('keydown',e=>keys[e.key]=true);addEventListener('keyup',e=>keys[e.key]=false);
+view.addEventListener('pointerdown',e=>{const r=view.getBoundingClientRect();if(e.clientX-r.left<r.width/2)keys.ArrowLeft=true;else keys.ArrowRight=true;keys[' ']=true});
+view.addEventListener('pointerup',()=>{keys.ArrowLeft=keys.ArrowRight=keys[' ']=false});
+document.getElementById('go').onclick=reset;
 let last=performance.now();
-function loop(now){const dt=Math.min(.033,(now-last)/1000); last=now; if(!dead&&!win){ vel.x+=(keys.ArrowRight||keys.d?22:0)*dt+(keys.ArrowLeft||keys.a?-22:0)*dt; vel.x*=Math.pow(.84,dt*60); vel.y-=22*dt; ball.position.x+=vel.x*dt; ball.position.y+=vel.y*dt; grounded=false; plats.forEach(({p})=>{ if(aabb(ball.position.x,ball.position.y,.38,p) && vel.y<=0 && ball.position.y>p[1]){ ball.position.y=p[1]+p[4]/2+.38; vel.y=0; grounded=true; }}); if(grounded && (keys.ArrowUp||keys.w||keys[' '])){ vel.y=9.2; SFX.move(); keys.ArrowUp=false; keys.w=false; keys[' ']=false; } if(ball.position.y<-3){dead=true;SFX.hit()} spikeM.forEach(s=>{if(ball.position.distanceTo(s.position)<.55){dead=true;SFX.hit()}}); starM.forEach(s=>{if(s.visible && ball.position.distanceTo(s.position)<.55){s.visible=false; got++; SFX.gold(); document.getElementById('stars').textContent='نجوم: '+got+'/'+starM.length;}}); if(got===starM.length && ball.position.distanceTo(goal.position)<.7){ if(L<2){L++; load()} else {win=true;SFX.win()} } } camera.position.x=ball.position.x; camera.position.y=Math.max(1.6,ball.position.y+1.4); camera.lookAt(ball.position.x,Math.max(1.2,ball.position.y+.4),0); renderer.render(scene,camera); requestAnimationFrame(loop);} load(); requestAnimationFrame(loop);
+function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;const w=view.clientWidth,h=view.clientHeight;
+if(!dead&&!win){vx+=(keys.ArrowRight||keys.d?1.6:0)*dt-(keys.ArrowLeft||keys.a?1.6:0)*dt;vx*=Math.pow(.84,dt*60);vy+=2.6*dt;x+=vx*dt;y+=vy*dt;gnd=false;
+plats.forEach(p=>{if(x>p.x&&x<p.x+p.w&&y>p.y&&y<p.y+p.h+.04&&vy>=0){y=p.y;vy=0;gnd=true}});
+if(gnd&&(keys.ArrowUp||keys.w||keys[' '])){vy=-1.05;SFX.move();keys[' ']=keys.ArrowUp=false}
+if(y>1.2){dead=true;SFX.hit()}
+stars.forEach((s,i)=>{if(!got.has(i)&&Math.hypot(x-s.x,y-s.y)<.05){got.add(i);SFX.gold();document.getElementById('stars').textContent='نجوم: '+got.size+'/'+stars.length}});
+if(got.size===stars.length){if(L<2){L++;load()}else win=true}}
+clear(ctx,view,'#082032');ctx.fillStyle='#64748b';plats.forEach(p=>ctx.fillRect(p.x*w,p.y*h,p.w*w,Math.max(8,p.h*h)));
+ctx.fillStyle='#facc15';stars.forEach((s,i)=>{if(!got.has(i)){ctx.beginPath();ctx.arc(s.x*w,s.y*h,7,0,7);ctx.fill()}});
+ctx.fillStyle='#38bdf8';ctx.beginPath();ctx.arc(x*w,y*h-12,12,0,7);ctx.fill();requestAnimationFrame(loop)}
+reset();requestAnimationFrame(loop);
 </script></body></html>
