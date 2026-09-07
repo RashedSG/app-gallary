@@ -1,43 +1,89 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>XO 3D</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>X O 2D</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../style.css">
 </head>
 <body>
   <div class="game-wrap">
-    <div class="topbar"><a href="../index.html">← المعرض</a><h2>إكس أو 3D</h2></div>
-    <div class="hud"><span id="turn">دورك: X</span><span id="lvl">الجولة: 1/3</span><button id="mode">الخصم: كمبيوتر</button><button id="go">إعادة</button></div>
+    <div class="topbar"><a href="../index.html">← المعرض</a><h2>X O 2D</h2></div>
+    <div class="hud">
+      <span id="turn">دور X</span>
+      <span id="lvl">الجولة: 1/3</span>
+      <span id="sc">X 0 — 0 O</span>
+      <button id="go">إعادة</button>
+    </div>
     <div id="view"></div>
-    <p class="hint">اضغط على المربع</p>
+    <p class="hint">أنت X · الكمبيوتر O · أفضل 3 جولات</p>
   </div>
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
-import * as THREE from 'three';
 import {makeAudio} from '../audio.js';
-import {boot3D} from '../look.js';
+import {boot2D,clear} from '../look.js';
 const SFX=makeAudio();
 const view=document.getElementById('view');
-const {renderer,scene,camera}=boot3D(view,3.2,0x080e1c);
-const board=new THREE.Mesh(new THREE.BoxGeometry(4.1,.28,4.1), new THREE.MeshStandardMaterial({color:0x1e293b,metalness:.2,roughness:.5}));
-board.position.set(0,-.22,0); scene.add(board);
-const tiles=[], marks=[];
-const tileMat=new THREE.MeshStandardMaterial({color:0x334155,roughness:.45});
-const xMat=new THREE.MeshStandardMaterial({color:0x38bdf8,emissive:0x0ea5e9,emissiveIntensity:.25});
-const oMat=new THREE.MeshStandardMaterial({color:0xfb7185,emissive:0xbe123c,emissiveIntensity:.2});
-for(let i=0;i<9;i++){const x=i%3,z=(i/3)|0; const t=new THREE.Mesh(new THREE.BoxGeometry(1.05,.12,1.05), tileMat.clone()); t.position.set(x*1.15-1.15,0,z*1.15-1.15); t.userData.i=i; scene.add(t); tiles.push(t);}
-let cells, vsAI=true, turn='X', over=false, round=1, px=0, po=0;
-function winner(b){const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]; for(const [a,c,d] of L) if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return b[a]; return b.every(Boolean)?'تعادل':null;}
-function addMark(i,who){const t=tiles[i], g=new THREE.Group(); g.position.copy(t.position); g.position.y=.35; if(who==='X'){const a=new THREE.Mesh(new THREE.BoxGeometry(.18,1.05,.18),xMat); const b=a.clone(); a.rotation.z=.7; b.rotation.z=-.7; g.add(a,b);} else {const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.1,10,20),oMat); ring.rotation.x=Math.PI/2; g.add(ring);} scene.add(g); marks.push(g);}
-function ai(){const empty=cells.map((v,i)=>v?null:i).filter(v=>v!==null); for(const i of empty){const t=cells.slice(); t[i]='O'; if(winner(t)==='O') return i} for(const i of empty){const t=cells.slice(); t[i]='X'; if(winner(t)==='X') return i} if(empty.includes(4)) return 4; return empty[(Math.random()*empty.length)|0];}
-function play(i){if(over||cells[i]) return; cells[i]=turn; addMark(i,turn); SFX.place(); const w=winner(cells); if(w){ over=true; if(w==='X')px++; else if(w==='O')po++; if(w!=='تعادل') SFX.eat(); else SFX.hit(); if(round<3){ document.getElementById('turn').textContent=(w==='تعادل'?'تعادل':'الفائز: '+w)+' · X '+px+'-'+po+' O'; } else { SFX.win(); document.getElementById('turn').textContent='نهاية 3 جولات · X '+px+' - '+po+' O'; document.getElementById('lvl').textContent='انتهت السلسلة'; return; } round++; document.getElementById('lvl').textContent='الجولة: '+round+'/3'; setTimeout(()=>{cells=Array(9).fill(''); over=false; turn='X'; marks.splice(0).forEach(m=>scene.remove(m)); document.getElementById('turn').textContent='دورك: X';},900); return; } turn=turn==='X'?'O':'X'; document.getElementById('turn').textContent='الدور: '+turn; if(vsAI && turn==='O' && !over) setTimeout(()=>play(ai()),280);}
-function reset(){cells=Array(9).fill(''); turn='X'; over=false; round=1; px=0; po=0; marks.splice(0).forEach(m=>scene.remove(m)); document.getElementById('turn').textContent='دورك: X'; document.getElementById('lvl').textContent='الجولة: 1/3'; SFX.start();}
-const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
-view.addEventListener('pointerdown',e=>{const r=view.getBoundingClientRect(); mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1; ray.setFromCamera(mouse,camera); const hit=ray.intersectObjects(tiles)[0]; if(hit) play(hit.object.userData.i);});
+const {ctx}=boot2D(view);
+const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let cells,turn,locked,round,px,po,busy;
+function ui(msg){
+  document.getElementById('turn').textContent=msg;
+  document.getElementById('lvl').textContent='الجولة: '+round+'/3';
+  document.getElementById('sc').textContent='X '+px+' — '+po+' O';
+}
+function reset(){cells=Array(9).fill('');turn='X';locked=false;busy=false;round=1;px=0;po=0;ui('دور X');SFX.start()}
+function winner(b=cells){for(const [a,c,d] of LINES) if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return b[a]; return b.every(Boolean)?'تعادل':null}
+function empty(){return cells.map((v,i)=>v?-1:i).filter(i=>i>=0)}
+function aiMove(){
+  const e=empty();
+  for(const i of e){const t=cells.slice(); t[i]='O'; if(winner(t)==='O') return i}
+  for(const i of e){const t=cells.slice(); t[i]='X'; if(winner(t)==='X') return i}
+  if(e.includes(4)) return 4;
+  const corners=e.filter(i=>[0,2,6,8].includes(i));
+  if(corners.length) return corners[(Math.random()*corners.length)|0];
+  return e[(Math.random()*e.length)|0];
+}
+function nextRound(w){
+  locked=true;
+  if(w==='X') px++; else if(w==='O') po++;
+  ui(w==='تعادل'?'تعادل':('الفائز: '+w));
+  if(round>=3){ SFX.win(); ui('النهاية  X '+px+' — '+po+' O'); return; }
+  SFX.eat();
+  setTimeout(()=>{cells=Array(9).fill('');turn='X';locked=false;busy=false;round++;ui('دور X');},800);
+}
+function play(i,who){
+  if(locked||busy||i==null||i<0||i>8||cells[i]||who!==turn) return;
+  cells[i]=who; SFX.place();
+  const w=winner();
+  if(w){ nextRound(w); return; }
+  turn=who==='X'?'O':'X'; ui('دور '+turn);
+  if(turn==='O'){ busy=true; setTimeout(()=>{ busy=false; play(aiMove(),'O'); },280); }
+}
+function board(){const w=view.clientWidth,h=view.clientHeight,s=Math.min(w,h)*0.78; return {s,x:(w-s)/2,y:(h-s)/2,g:s/3}}
+view.addEventListener('pointerdown',e=>{
+  if(turn!=='X'||locked||busy) return;
+  const r=view.getBoundingClientRect(),b=board();
+  const cx=e.clientX-r.left-b.x, cy=e.clientY-r.top-b.y;
+  if(cx<0||cy<0||cx>b.s||cy>b.s) return;
+  play(((cy/b.g)|0)*3+((cx/b.g)|0),'X');
+});
 document.getElementById('go').onclick=reset;
-document.getElementById('mode').onclick=e=>{vsAI=!vsAI; e.target.textContent='الخصم: '+(vsAI?'كمبيوتر':'صديق'); reset();};
-function loop(){ renderer.render(scene,camera); requestAnimationFrame(loop); }
+function loop(){
+  clear(ctx,view,'#0b1020');
+  const b=board();
+  for(let i=0;i<9;i++){
+    const col=i%3,row=(i/3)|0;
+    const x=b.x+col*b.g+6, y=b.y+row*b.g+6, s=b.g-12;
+    ctx.fillStyle='#1e293b';
+    ctx.beginPath(); ctx.roundRect(x,y,s,s,14); ctx.fill();
+    if(cells[i]){
+      ctx.fillStyle=cells[i]==='X'?'#38bdf8':'#fb7185';
+      ctx.font='700 '+Math.floor(s*0.55)+'px Cairo,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(cells[i], x+s/2, y+s/2+2);
+    }
+  }
+  requestAnimationFrame(loop);
+}
 reset(); requestAnimationFrame(loop);
 </script></body></html>

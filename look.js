@@ -12,7 +12,6 @@ export function boot2D(view) {
   canvas.style.touchAction = 'none';
   view.appendChild(canvas);
   const ctx = canvas.getContext('2d');
-
   function fit() {
     const w = Math.max(1, view.clientWidth);
     const h = Math.max(1, view.clientHeight);
@@ -21,15 +20,17 @@ export function boot2D(view) {
     canvas.height = Math.floor(h * d);
     ctx.setTransform(d, 0, 0, d, 0, 0);
   }
-
   addEventListener('resize', fit);
-  addEventListener('orientationchange', () => setTimeout(fit, 200));
-  new ResizeObserver(fit).observe(view);
+  try { new ResizeObserver(fit).observe(view); } catch (e) {}
   fit();
   return { canvas, ctx, fit };
 }
 
 export function clear(ctx, view, bg) {
-  ctx.fillStyle = bg;
+  ctx.fillStyle = bg || '#071018';
   ctx.fillRect(0, 0, Math.max(1, view.clientWidth), Math.max(1, view.clientHeight));
+}
+
+export function boot3D(view) {
+  return boot2D(view);
 }
